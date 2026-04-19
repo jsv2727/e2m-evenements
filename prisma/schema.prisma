@@ -1,0 +1,177 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = env("DATABASE_PROVIDER")
+  url      = env("DATABASE_URL")
+}
+
+model Event {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  venue       String?
+  city        String?
+  status      String      @default("PLANNING")
+  budget      Float       @default(0)
+  clientName  String?
+  clientEmail String?
+  clientPhone String?
+  type        String?
+  capacity    Int?
+  notes       String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  tasks       Task[]
+  guests      Guest[]
+  suppliers   EventSupplier[]
+  expenses    Expense[]
+  contracts   Contract[]
+  invoices    Invoice[]
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  status      String   @default("TODO")
+  dueDate     DateTime?
+  priority    String   @default("MEDIUM")
+  assignee    String?
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Guest {
+  id          String   @id @default(cuid())
+  firstName   String
+  lastName    String
+  email       String
+  phone       String?
+  company     String?
+  title       String?
+  status      String   @default("INVITED")
+  table       String?
+  dietary     String?
+  notes       String?
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+}
+
+model Supplier {
+  id          String   @id @default(cuid())
+  name        String
+  category    String
+  email       String?
+  phone       String?
+  address     String?
+  website     String?
+  contactName String?
+  rating      Int?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  events      EventSupplier[]
+  contracts   Contract[]
+  invoices    Invoice[]
+}
+
+model EventSupplier {
+  id          String   @id @default(cuid())
+  eventId     String
+  supplierId  String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  supplier    Supplier @relation(fields: [supplierId], references: [id])
+  role        String?
+  fee         Float    @default(0)
+  status      String   @default("PENDING")
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
+model Contract {
+  id          String   @id @default(cuid())
+  title       String
+  content     String
+  type        String
+  status      String   @default("DRAFT")
+  eventId     String?
+  supplierId  String?
+  event       Event?   @relation(fields: [eventId], references: [id])
+  supplier    Supplier? @relation(fields: [supplierId], references: [id])
+  partyA      String?
+  partyB      String?
+  value       Float?
+  startDate   DateTime?
+  endDate     DateTime?
+  signedDate  DateTime?
+  notes       String?
+  riskScore   Int?
+  aiReview    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  description String
+  amount      Float
+  category    String
+  date        DateTime
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  vendor      String?
+  receipt     String?
+  approved    Boolean  @default(false)
+  notes       String?
+  createdAt   DateTime @default(now())
+}
+
+model Invoice {
+  id          String   @id @default(cuid())
+  number      String   @unique
+  eventId     String?
+  supplierId  String?
+  event       Event?   @relation(fields: [eventId], references: [id])
+  supplier    Supplier? @relation(fields: [supplierId], references: [id])
+  issuer      String?
+  recipient   String?
+  amount      Float
+  tax         Float    @default(0)
+  status      String   @default("PENDING")
+  type        String   @default("PAYABLE")
+  dueDate     DateTime
+  paidDate    DateTime?
+  items       String
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AiConversation {
+  id        String   @id @default(cuid())
+  module    String
+  title     String   @default("Nouvelle conversation")
+  messages  String
+  model     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model AppSettings {
+  id        String   @id @default("singleton")
+  companyName String @default("Événements 2M")
+  currency    String @default("CAD")
+  timezone    String @default("America/Toronto")
+  language    String @default("fr")
+  aiModel     String @default("claude-opus-4-7")
+  updatedAt   DateTime @updatedAt
+}
