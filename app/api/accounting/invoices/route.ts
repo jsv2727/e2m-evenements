@@ -44,3 +44,11 @@ export async function PATCH(req: Request) {
   });
   return NextResponse.json(invoice);
 }
+
+export async function DELETE(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get('id');
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+  await db.invoice.delete({ where: { id } });
+  return NextResponse.json({ success: true });
+}

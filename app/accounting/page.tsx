@@ -4,7 +4,14 @@ import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Modal from '@/components/Modal';
 import { formatCurrency, formatDate, getStatusColor, getStatusLabel, generateInvoiceNumber } from '@/lib/utils';
-import { Plus, TrendingUp, TrendingDown, DollarSign, FileText, Bot, Loader2, Upload } from 'lucide-react';
+import { Plus, TrendingUp, TrendingDown, DollarSign, FileText, Bot, Loader2, Upload, Trash2 } from 'lucide-react';
+
+const TAX_RATES = [
+  { key: 'QC', label: 'TPS + TVQ (Québec)', rate: 14.975 },
+  { key: 'GST', label: 'TPS seulement', rate: 5 },
+  { key: 'HST_ON', label: 'TVH Ontario', rate: 13 },
+  { key: 'NONE', label: 'Exonéré', rate: 0 },
+];
 import FileUpload from '@/components/FileUpload';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart as RechartsPie, Pie, Cell } from 'recharts';
 
@@ -32,7 +39,12 @@ export default function AccountingPage() {
   const [aiLoading, setAiLoading] = useState(false);
 
   const [expForm, setExpForm] = useState({ description: '', amount: '', category: 'Venue', date: new Date().toISOString().split('T')[0], vendor: '', eventId: '' });
-  const [invForm, setInvForm] = useState({ number: generateInvoiceNumber(), issuer: 'Événements 2M Inc.', recipient: '', amount: '', tax: '15', dueDate: '', type: 'RECEIVABLE', eventId: '' });
+  const [invForm, setInvForm] = useState({ number: generateInvoiceNumber(), issuer: 'Événements 2M Inc.', recipient: '', amount: '', tax: '0', taxRateKey: 'QC', dueDate: '', type: 'RECEIVABLE', eventId: '' });
+
+  const invAmountNum = parseFloat(invForm.amount) || 0;
+  const invTaxRate = TAX_RATES.find(t => t.key === invForm.taxRateKey)?.rate ?? 0;
+  const invTaxNum = Math.round(invAmountNum * invTaxRate) / 100;
+  const invTotalNum = invAmountNum + invTaxNum;
 
   const fetchData = async () => {
     const [e, i, ev] = await Promise.all([
@@ -63,10 +75,16 @@ export default function AccountingPage() {
     await fetch('/api/accounting/invoices', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...invForm, amount: parseFloat(invForm.amount), tax: parseFloat(invForm.tax) }),
+      body: JSON.stringify({ ...invForm, amount: invAmountNum, tax: invTaxNum }),
     });
     setInvoiceModal(false);
-    setInvForm({ ...invForm, number: generateInvoiceNumber() });
+    setInvForm({ ...invForm, number: generateInvoiceNumber(), amount: '', recipient: '' });
+    fetchData();
+  };
+
+  const deleteInvoice = async (id: string, number: string) => {
+    if (!confirm(`Supprimer la facture ${number} ? Cette action est irréversible.`)) return;
+    await fetch(`/api/accounting/invoices?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     fetchData();
   };
 
@@ -271,9 +289,14 @@ export default function AccountingPage() {
                     <td className="p-4"><span className={`text-xs px-2 py-0.5 rounded-full border ${getStatusColor(inv.status)}`}>{getStatusLabel(inv.status)}</span></td>
                     <td className="p-4 text-right font-semibold text-white">{formatCurrency(inv.amount + inv.tax)}</td>
                     <td className="p-4">
-                      {inv.status === 'PENDING' && (
-                        <button onClick={() => markPaid(inv.id)} className="text-xs text-emerald-400 hover:text-emerald-300 px-2 py-1 rounded hover:bg-emerald-500/10">Marquer payé</button>
-                      )}
+                      <div className="flex items-center justify-end gap-1">
+                        {inv.status === 'PENDING' && (
+                          <button onClick={() => markPaid(inv.id)} className="text-xs text-emerald-400 hover:text-emerald-300 px-2 py-1 rounded hover:bg-emerald-500/10">Marquer payé</button>
+                        )}
+                        <button onClick={() => deleteInvoice(inv.id, inv.number)} title="Supprimer la facture" className="text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10 transition-colors">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -349,15 +372,17 @@ export default function AccountingPage() {
               <input className={inputCls} value={invForm.recipient} onChange={e => setInvForm({ ...invForm, recipient: e.target.value })} />
             </div>
             <div>
-              <label className={labelCls}>Montant avant taxes ($)</label>
-              <input required type="number" step="0.01" className={inputCls} value={invForm.amount} onChange={e => setInvForm({ ...invForm, amount: e.target.value })} />
+              <label className={labelCls}>Montant avant taxes ($) *</label>
+              <input required type="number" step="0.01" min="0" className={inputCls} value={invForm.amount} onChange={e => setInvForm({ ...invForm, amount: e.target.value })} />
             </div>
             <div>
-              <label className={labelCls}>Taxes ($)</label>
-              <input type="number" step="0.01" className={inputCls} value={invForm.tax} onChange={e => setInvForm({ ...invForm, tax: e.target.value })} />
+              <label className={labelCls}>Régime de taxes</label>
+              <select className={inputCls} value={invForm.taxRateKey} onChange={e => setInvForm({ ...invForm, taxRateKey: e.target.value })}>
+                {TAX_RATES.map(t => <option key={t.key} value={t.key}>{t.label} ({t.rate}%)</option>)}
+              </select>
             </div>
             <div>
-              <label className={labelCls}>Date d'échéance</label>
+              <label className={labelCls}>Date d'échéance *</label>
               <input required type="date" className={inputCls} value={invForm.dueDate} onChange={e => setInvForm({ ...invForm, dueDate: e.target.value })} />
             </div>
             <div>
@@ -366,6 +391,20 @@ export default function AccountingPage() {
                 <option value="">Aucun</option>
                 {events.map(ev => <option key={ev.id} value={ev.id}>{ev.name}</option>)}
               </select>
+            </div>
+          </div>
+          <div className="bg-slate-800 border border-slate-700 rounded-lg p-3 space-y-1.5 text-sm">
+            <div className="flex justify-between text-slate-400">
+              <span>Sous-total</span>
+              <span className="font-mono">{formatCurrency(invAmountNum)}</span>
+            </div>
+            <div className="flex justify-between text-slate-400">
+              <span>Taxes ({invTaxRate}%)</span>
+              <span className="font-mono">{formatCurrency(invTaxNum)}</span>
+            </div>
+            <div className="flex justify-between pt-1.5 border-t border-slate-700 text-white font-semibold">
+              <span>Total TTC</span>
+              <span className="font-mono">{formatCurrency(invTotalNum)}</span>
             </div>
           </div>
           <div className="flex justify-end gap-3">
