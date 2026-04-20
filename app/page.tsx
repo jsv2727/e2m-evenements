@@ -4,6 +4,8 @@ import Header from '@/components/Header';
 import { Calendar, DollarSign, Users, TrendingUp, AlertCircle, CheckCircle2, Clock } from 'lucide-react';
 import Link from 'next/link';
 
+export const dynamic = 'force-dynamic';
+
 async function getDashboardData() {
   const [events, expenses, guests, tasks, contracts] = await Promise.all([
     db.event.findMany({ orderBy: { startDate: 'asc' }, include: { expenses: true, guests: true } }),
