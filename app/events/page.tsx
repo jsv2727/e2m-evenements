@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Modal from '@/components/Modal';
 import { formatCurrency, formatDate, getDaysUntil, getStatusColor, getStatusLabel } from '@/lib/utils';
-import { Plus, Calendar, MapPin, DollarSign, Users, Search, Filter } from 'lucide-react';
+import { Plus, Calendar, MapPin, DollarSign, Users, Search, Filter, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 
 type Event = {
@@ -57,6 +57,14 @@ export default function EventsPage() {
     });
     setModalOpen(false);
     setForm({ name: '', description: '', startDate: '', endDate: '', venue: '', city: '', status: 'PLANNING', budget: '', clientName: '', clientEmail: '', clientPhone: '', type: '', capacity: '' });
+    fetchEvents();
+  };
+
+  const deleteEvent = async (e: React.MouseEvent, id: string, name: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm(`Supprimer l'événement "${name}" ? Toutes les données associées (invités, tâches, dépenses, contrats) seront également supprimées. Cette action est irréversible.`)) return;
+    await fetch(`/api/events/${id}`, { method: 'DELETE' });
     fetchEvents();
   };
 
@@ -126,8 +134,11 @@ export default function EventsPage() {
               const days = getDaysUntil(event.startDate);
               return (
                 <Link key={event.id} href={`/events/${event.id}`}>
-                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-900/20 transition-all group cursor-pointer">
-                    <div className="flex items-start justify-between mb-3">
+                  <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-900/20 transition-all group cursor-pointer relative">
+                    <button onClick={(e) => deleteEvent(e, event.id, event.name)} title="Supprimer l'événement" className="absolute top-3 right-3 text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all z-10">
+                      <Trash2 size={14} />
+                    </button>
+                    <div className="flex items-start justify-between mb-3 pr-8">
                       <span className={`text-xs px-2 py-0.5 rounded-full border ${getStatusColor(event.status)}`}>
                         {getStatusLabel(event.status)}
                       </span>

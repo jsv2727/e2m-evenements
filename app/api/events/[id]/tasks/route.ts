@@ -29,3 +29,11 @@ export async function PATCH(req: Request) {
   });
   return NextResponse.json(task);
 }
+
+export async function DELETE(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const taskId = searchParams.get('taskId');
+  if (!taskId) return NextResponse.json({ error: 'taskId required' }, { status: 400 });
+  await db.task.delete({ where: { id: taskId } });
+  return NextResponse.json({ success: true });
+}

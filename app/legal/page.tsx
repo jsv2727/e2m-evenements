@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Modal from '@/components/Modal';
 import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from '@/lib/utils';
-import { Plus, FileText, Bot, AlertTriangle, CheckCircle2, Loader2, Upload } from 'lucide-react';
+import { Plus, FileText, Bot, AlertTriangle, CheckCircle2, Loader2, Upload, Trash2 } from 'lucide-react';
 import FileUpload from '@/components/FileUpload';
 
 type Contract = {
@@ -92,6 +92,13 @@ export default function LegalPage() {
     const data = await r.json();
     setSelected({ ...contract, aiReview: data.review, riskScore: data.riskScore });
     setReviewing(false);
+    fetchContracts();
+  };
+
+  const deleteContract = async (id: string, title: string) => {
+    if (!confirm(`Supprimer le contrat "${title}" ? Cette action est irréversible.`)) return;
+    await fetch(`/api/legal/contracts?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (selected?.id === id) setSelected(null);
     fetchContracts();
   };
 
@@ -198,6 +205,10 @@ export default function LegalPage() {
                       <CheckCircle2 size={14} /> Marquer signé
                     </button>
                   )}
+                  <button onClick={() => deleteContract(selected.id, selected.title)} title="Supprimer le contrat"
+                    className="flex items-center gap-1.5 px-3 py-2 bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-500/20 text-sm rounded-lg transition-colors">
+                    <Trash2 size={14} /> Supprimer
+                  </button>
                 </div>
               </div>
 

@@ -5,7 +5,7 @@ import Header from '@/components/Header';
 import Modal from '@/components/Modal';
 import FileUpload from '@/components/FileUpload';
 import { getStatusColor, getStatusLabel } from '@/lib/utils';
-import { Users, Search, Mail, Phone, Upload } from 'lucide-react';
+import { Users, Search, Mail, Phone, Upload, Trash2 } from 'lucide-react';
 
 type Guest = {
   id: string; firstName: string; lastName: string; email: string; phone?: string;
@@ -53,6 +53,21 @@ export default function GuestsPage() {
       count++;
     }
     setImportResult({ count });
+    fetchGuests();
+  };
+
+  const updateGuestStatus = async (id: string, status: string) => {
+    await fetch('/api/guests', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, status }),
+    });
+    fetchGuests();
+  };
+
+  const deleteGuest = async (id: string, name: string) => {
+    if (!confirm(`Supprimer l'invité "${name}" ? Cette action est irréversible.`)) return;
+    await fetch(`/api/guests?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
     fetchGuests();
   };
 
@@ -126,11 +141,12 @@ export default function GuestsPage() {
                 <th className="text-left p-4 font-medium">Entreprise</th>
                 <th className="text-left p-4 font-medium">Événement</th>
                 <th className="text-left p-4 font-medium">Statut</th>
+                <th className="p-4"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800">
               {loading ? (
-                <tr><td colSpan={5} className="p-8 text-center text-slate-500">Chargement...</td></tr>
+                <tr><td colSpan={6} className="p-8 text-center text-slate-500">Chargement...</td></tr>
               ) : filtered.map(g => (
                 <tr key={g.id} className="hover:bg-slate-800/50">
                   <td className="p-4 font-medium text-white">{g.firstName} {g.lastName}</td>
@@ -141,9 +157,17 @@ export default function GuestsPage() {
                   <td className="p-4 text-slate-400">{g.company || '—'}</td>
                   <td className="p-4 text-slate-400 text-xs">{g.event?.name || '—'}</td>
                   <td className="p-4">
-                    <span className={`text-xs px-2 py-0.5 rounded-full border ${getStatusColor(g.status)}`}>
-                      {getStatusLabel(g.status)}
-                    </span>
+                    <select value={g.status} onChange={e => updateGuestStatus(g.id, e.target.value)}
+                      className={`text-xs px-2 py-1 rounded-full border bg-slate-900 focus:outline-none focus:border-indigo-500 cursor-pointer ${getStatusColor(g.status)}`}>
+                      {['INVITED', 'CONFIRMED', 'DECLINED', 'ATTENDED', 'NO_SHOW'].map(s => (
+                        <option key={s} value={s} className="bg-slate-800 text-white">{getStatusLabel(s)}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="p-4 text-right">
+                    <button onClick={() => deleteGuest(g.id, `${g.firstName} ${g.lastName}`)} title="Supprimer l'invité" className="text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10 transition-colors">
+                      <Trash2 size={14} />
+                    </button>
                   </td>
                 </tr>
               ))}

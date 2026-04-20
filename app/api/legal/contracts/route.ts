@@ -39,6 +39,7 @@ export async function PATCH(req: Request) {
     where: { id: body.id },
     data: {
       ...(body.status && { status: body.status }),
+      ...(body.title && { title: body.title }),
       ...(body.signedDate && { signedDate: new Date(body.signedDate) }),
       ...(body.aiReview !== undefined && { aiReview: body.aiReview }),
       ...(body.riskScore !== undefined && { riskScore: body.riskScore }),
@@ -46,4 +47,12 @@ export async function PATCH(req: Request) {
     },
   });
   return NextResponse.json(contract);
+}
+
+export async function DELETE(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get('id');
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+  await db.contract.delete({ where: { id } });
+  return NextResponse.json({ success: true });
 }

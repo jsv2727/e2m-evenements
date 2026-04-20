@@ -88,6 +88,12 @@ export default function AccountingPage() {
     fetchData();
   };
 
+  const deleteExpense = async (id: string, description: string) => {
+    if (!confirm(`Supprimer la dépense "${description}" ? Cette action est irréversible.`)) return;
+    await fetch(`/api/accounting/expenses?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    fetchData();
+  };
+
   const markPaid = async (id: string) => {
     await fetch('/api/accounting/invoices', {
       method: 'PATCH',
@@ -243,6 +249,7 @@ export default function AccountingPage() {
                   <th className="text-left p-4 font-medium">Catégorie</th>
                   <th className="text-left p-4 font-medium">Date</th>
                   <th className="text-right p-4 font-medium">Montant</th>
+                  <th className="p-4"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-800">
@@ -253,6 +260,11 @@ export default function AccountingPage() {
                     <td className="p-4"><span className="text-xs bg-slate-800 text-slate-300 px-2 py-0.5 rounded">{e.category}</span></td>
                     <td className="p-4 text-slate-400">{formatDate(e.date)}</td>
                     <td className="p-4 text-right text-red-400 font-semibold">{formatCurrency(e.amount)}</td>
+                    <td className="p-4 text-right">
+                      <button onClick={() => deleteExpense(e.id, e.description)} title="Supprimer la dépense" className="text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10 transition-colors">
+                        <Trash2 size={14} />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

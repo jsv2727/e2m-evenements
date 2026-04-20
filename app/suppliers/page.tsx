@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Modal from '@/components/Modal';
 import { getStatusColor, getStatusLabel } from '@/lib/utils';
-import { Plus, Star, Phone, Mail, Globe, Truck, Search, Bot } from 'lucide-react';
+import { Plus, Star, Phone, Mail, Globe, Truck, Search, Bot, Trash2 } from 'lucide-react';
 
 type Supplier = {
   id: string; name: string; category: string; email?: string; phone?: string;
@@ -69,6 +69,16 @@ export default function SuppliersPage() {
     setAiLoading(false);
   };
 
+  const deleteSupplier = async (id: string, name: string) => {
+    if (!confirm(`Supprimer le fournisseur "${name}" ? Cette action est irréversible.`)) return;
+    const r = await fetch(`/api/suppliers?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!r.ok) {
+      alert('Impossible de supprimer ce fournisseur. Il est peut-être lié à des événements ou contrats existants.');
+      return;
+    }
+    fetchSuppliers();
+  };
+
   const filtered = suppliers.filter(s => {
     const q = search.toLowerCase();
     return (!q || s.name.toLowerCase().includes(q) || s.category.toLowerCase().includes(q)) &&
@@ -109,8 +119,11 @@ export default function SuppliersPage() {
         <div className="grid grid-cols-3 gap-4">
           {loading ? [1, 2, 3].map(i => <div key={i} className="h-40 bg-slate-900 border border-slate-800 rounded-xl animate-pulse" />) :
             filtered.map(s => (
-              <div key={s.id} className="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition-all">
-                <div className="flex items-start justify-between mb-3">
+              <div key={s.id} className="group relative bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition-all">
+                <button onClick={() => deleteSupplier(s.id, s.name)} title="Supprimer le fournisseur" className="absolute top-3 right-3 text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all">
+                  <Trash2 size={14} />
+                </button>
+                <div className="flex items-start justify-between mb-3 pr-8">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-white truncate">{s.name}</h3>
                     <span className="text-xs text-slate-500 bg-slate-800 px-2 py-0.5 rounded-full">{s.category}</span>

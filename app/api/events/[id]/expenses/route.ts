@@ -16,3 +16,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   });
   return NextResponse.json(expense);
 }
+
+export async function DELETE(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const expenseId = searchParams.get('expenseId');
+  if (!expenseId) return NextResponse.json({ error: 'expenseId required' }, { status: 400 });
+  await db.expense.delete({ where: { id: expenseId } });
+  return NextResponse.json({ success: true });
+}

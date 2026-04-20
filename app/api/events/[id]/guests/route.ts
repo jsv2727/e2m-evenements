@@ -23,7 +23,22 @@ export async function PATCH(req: Request) {
   const body = await req.json();
   const guest = await db.guest.update({
     where: { id: body.id },
-    data: { status: body.status },
+    data: {
+      ...(body.status && { status: body.status }),
+      ...(body.firstName && { firstName: body.firstName }),
+      ...(body.lastName && { lastName: body.lastName }),
+      ...(body.email && { email: body.email }),
+      ...(body.phone !== undefined && { phone: body.phone }),
+      ...(body.company !== undefined && { company: body.company }),
+    },
   });
   return NextResponse.json(guest);
+}
+
+export async function DELETE(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const guestId = searchParams.get('guestId');
+  if (!guestId) return NextResponse.json({ error: 'guestId required' }, { status: 400 });
+  await db.guest.delete({ where: { id: guestId } });
+  return NextResponse.json({ success: true });
 }

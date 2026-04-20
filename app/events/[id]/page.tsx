@@ -108,6 +108,33 @@ export default function EventDetailPage() {
     fetchEvent();
   };
 
+  const deleteTask = async (taskId: string, title: string) => {
+    if (!confirm(`Supprimer la tâche "${title}" ?`)) return;
+    await fetch(`/api/events/${id}/tasks?taskId=${encodeURIComponent(taskId)}`, { method: 'DELETE' });
+    fetchEvent();
+  };
+
+  const deleteGuest = async (guestId: string, name: string) => {
+    if (!confirm(`Supprimer l'invité "${name}" ?`)) return;
+    await fetch(`/api/events/${id}/guests?guestId=${encodeURIComponent(guestId)}`, { method: 'DELETE' });
+    fetchEvent();
+  };
+
+  const updateGuestStatus = async (guestId: string, status: string) => {
+    await fetch(`/api/events/${id}/guests`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: guestId, status }),
+    });
+    fetchEvent();
+  };
+
+  const deleteExpense = async (expenseId: string, description: string) => {
+    if (!confirm(`Supprimer la dépense "${description}" ?`)) return;
+    await fetch(`/api/events/${id}/expenses?expenseId=${encodeURIComponent(expenseId)}`, { method: 'DELETE' });
+    fetchEvent();
+  };
+
   const addGuest = async (e: React.FormEvent) => {
     e.preventDefault();
     await fetch(`/api/events/${id}/guests`, {
@@ -310,6 +337,9 @@ export default function EventDetailPage() {
                         {task.dueDate && <span className={`text-xs ${getDaysUntil(task.dueDate) < 0 ? 'text-red-400' : 'text-slate-500'}`}>{formatDate(task.dueDate)}</span>}
                       </div>
                     </div>
+                    <button onClick={() => deleteTask(task.id, task.title)} title="Supprimer" className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10 transition-all">
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 ))
               )}
@@ -342,16 +372,27 @@ export default function EventDetailPage() {
                     <th className="text-left pb-2 font-medium">Courriel</th>
                     <th className="text-left pb-2 font-medium">Entreprise</th>
                     <th className="text-left pb-2 font-medium">Statut</th>
+                    <th className="pb-2"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
                   {event.guests.map(g => (
-                    <tr key={g.id} className="hover:bg-slate-800/50">
+                    <tr key={g.id} className="hover:bg-slate-800/50 group">
                       <td className="py-2.5 text-white">{g.firstName} {g.lastName}</td>
                       <td className="py-2.5 text-slate-400">{g.email}</td>
                       <td className="py-2.5 text-slate-400">{g.company || '—'}</td>
                       <td className="py-2.5">
-                        <span className={`text-xs px-2 py-0.5 rounded-full border ${getStatusColor(g.status)}`}>{getStatusLabel(g.status)}</span>
+                        <select value={g.status} onChange={e => updateGuestStatus(g.id, e.target.value)}
+                          className={`text-xs px-2 py-1 rounded-full border bg-slate-900 focus:outline-none focus:border-indigo-500 cursor-pointer ${getStatusColor(g.status)}`}>
+                          {GUEST_STATUSES.map(s => (
+                            <option key={s} value={s} className="bg-slate-800 text-white">{getStatusLabel(s)}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="py-2.5 text-right">
+                        <button onClick={() => deleteGuest(g.id, `${g.firstName} ${g.lastName}`)} title="Supprimer" className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10 transition-all">
+                          <Trash2 size={14} />
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -392,16 +433,22 @@ export default function EventDetailPage() {
                       <th className="text-left pb-2 font-medium">Fournisseur</th>
                       <th className="text-left pb-2 font-medium">Date</th>
                       <th className="text-right pb-2 font-medium">Montant</th>
+                      <th className="pb-2"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-800">
                     {event.expenses.map(exp => (
-                      <tr key={exp.id} className="hover:bg-slate-800/50">
+                      <tr key={exp.id} className="hover:bg-slate-800/50 group">
                         <td className="py-2.5 text-white">{exp.description}</td>
                         <td className="py-2.5 text-slate-400">{exp.category}</td>
                         <td className="py-2.5 text-slate-400">{exp.vendor || '—'}</td>
                         <td className="py-2.5 text-slate-400">{formatDate(exp.date)}</td>
                         <td className="py-2.5 text-right text-amber-400 font-medium">{formatCurrency(exp.amount)}</td>
+                        <td className="py-2.5 text-right">
+                          <button onClick={() => deleteExpense(exp.id, exp.description)} title="Supprimer" className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10 transition-all">
+                            <Trash2 size={14} />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
