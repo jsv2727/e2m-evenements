@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Plateforme complète de gestion d'événements avec IA Anthropic",
   "private": true,
+  "engines": {
+    "node": ">=20.16.0"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
