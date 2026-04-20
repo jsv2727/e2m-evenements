@@ -1,12 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Modal from '@/components/Modal';
 import { formatCurrency, formatDate, getDaysUntil, getStatusColor, getStatusLabel, calculateBudgetUsage } from '@/lib/utils';
-import { CheckCircle2, Circle, Plus, Trash2, Users, DollarSign, FileText, Calendar, ArrowLeft, Bot, ChevronRight } from 'lucide-react';
+import { CheckCircle2, Circle, Plus, Trash2, Users, DollarSign, FileText, Calendar, ArrowLeft, Bot, ChevronRight, ChevronDown, Check } from 'lucide-react';
 import Link from 'next/link';
+
+const EVENT_STATUSES = ['PLANNING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
 
 type Task = { id: string; title: string; status: string; priority: string; dueDate?: string; assignee?: string };
 type Guest = { id: string; firstName: string; lastName: string; email: string; company?: string; status: string };
@@ -40,6 +42,42 @@ export default function EventDetailPage() {
   const [expenseForm, setExpenseForm] = useState({ description: '', amount: '', category: 'Venue', date: new Date().toISOString().split('T')[0], vendor: '' });
   const [aiSuggestion, setAiSuggestion] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
+  const [statusMenuOpen, setStatusMenuOpen] = useState(false);
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const statusMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!statusMenuOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (statusMenuRef.current && !statusMenuRef.current.contains(e.target as Node)) {
+        setStatusMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [statusMenuOpen]);
+
+  const updateStatus = async (newStatus: string) => {
+    if (!event || newStatus === event.status) {
+      setStatusMenuOpen(false);
+      return;
+    }
+    setStatusUpdating(true);
+    setEvent({ ...event, status: newStatus });
+    try {
+      const r = await fetch(`/api/events/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!r.ok) throw new Error('update failed');
+      await fetchEvent();
+    } catch {
+      await fetchEvent();
+    }
+    setStatusUpdating(false);
+    setStatusMenuOpen(false);
+  };
 
   const fetchEvent = async () => {
     const r = await fetch(`/api/events/${id}`);
@@ -135,7 +173,32 @@ export default function EventDetailPage() {
         subtitle={event.clientName ? `Client: ${event.clientName}` : formatDate(event.startDate)}
         actions={
           <div className="flex items-center gap-2">
-            <span className={`text-xs px-2.5 py-1 rounded-full border ${getStatusColor(event.status)}`}>{getStatusLabel(event.status)}</span>
+            <div className="relative" ref={statusMenuRef}>
+              <button
+                type="button"
+                onClick={() => setStatusMenuOpen(o => !o)}
+                disabled={statusUpdating}
+                className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full border hover:brightness-125 transition-all disabled:opacity-60 ${getStatusColor(event.status)}`}
+              >
+                {getStatusLabel(event.status)}
+                <ChevronDown size={12} />
+              </button>
+              {statusMenuOpen && (
+                <div className="absolute right-0 top-full mt-1 w-44 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-20 py-1">
+                  {EVENT_STATUSES.map(s => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => updateStatus(s)}
+                      className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-left hover:bg-slate-800 transition-colors"
+                    >
+                      <span className={`px-2 py-0.5 rounded-full border ${getStatusColor(s)}`}>{getStatusLabel(s)}</span>
+                      {s === event.status && <Check size={12} className="text-indigo-400" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <Link href="/events" className="flex items-center gap-1 text-sm text-slate-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-slate-800 transition-all">
               <ArrowLeft size={14} />
               Retour
