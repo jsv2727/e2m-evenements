@@ -33,6 +33,22 @@ model Event {
   expenses    Expense[]
   contracts   Contract[]
   invoices    Invoice[]
+  budgetItems EventBudget[]
+}
+
+model EventBudget {
+  id          String   @id @default(cuid())
+  eventId     String
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  category    String
+  amount      Float    @default(0)
+  notes       String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([eventId, category])
+  @@index([eventId])
 }
 
 model Task {

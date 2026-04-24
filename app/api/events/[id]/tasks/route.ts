@@ -24,7 +24,10 @@ export async function PATCH(req: Request) {
     data: {
       ...(body.status && { status: body.status }),
       ...(body.title && { title: body.title }),
+      ...(body.description !== undefined && { description: body.description }),
       ...(body.priority && { priority: body.priority }),
+      ...(body.dueDate !== undefined && { dueDate: body.dueDate ? new Date(body.dueDate) : null }),
+      ...(body.assignee !== undefined && { assignee: body.assignee }),
     },
   });
   return NextResponse.json(task);

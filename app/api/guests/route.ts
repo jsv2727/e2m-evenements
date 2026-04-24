@@ -20,6 +20,10 @@ export async function PATCH(req: Request) {
       ...(body.firstName && { firstName: body.firstName }),
       ...(body.lastName && { lastName: body.lastName }),
       ...(body.email && { email: body.email }),
+      ...(body.phone !== undefined && { phone: body.phone }),
+      ...(body.company !== undefined && { company: body.company }),
+      ...(body.title !== undefined && { title: body.title }),
+      ...(body.dietary !== undefined && { dietary: body.dietary }),
     },
   });
   return NextResponse.json(guest);

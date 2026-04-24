@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Modal from '@/components/Modal';
 import { formatCurrency, formatDate, getDaysUntil, getStatusColor, getStatusLabel } from '@/lib/utils';
-import { Plus, Calendar, MapPin, DollarSign, Users, Search, Filter, Trash2 } from 'lucide-react';
+import { Plus, Calendar, MapPin, DollarSign, Users, Search, Filter, Trash2, Pencil } from 'lucide-react';
 import Link from 'next/link';
 
 type Event = {
@@ -33,11 +33,13 @@ export default function EventsPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
-  const [form, setForm] = useState({
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const emptyForm = {
     name: '', description: '', startDate: '', endDate: '',
     venue: '', city: '', status: 'PLANNING', budget: '',
     clientName: '', clientEmail: '', clientPhone: '', type: '', capacity: '',
-  });
+  };
+  const [form, setForm] = useState(emptyForm);
 
   const fetchEvents = async () => {
     const r = await fetch('/api/events');
@@ -50,14 +52,52 @@ export default function EventsPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch('/api/events', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, budget: parseFloat(form.budget) || 0, capacity: parseInt(form.capacity) || null }),
-    });
+    const payload = { ...form, budget: parseFloat(form.budget) || 0, capacity: parseInt(form.capacity) || null };
+    if (editingId) {
+      await fetch(`/api/events/${editingId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    } else {
+      await fetch('/api/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    }
     setModalOpen(false);
-    setForm({ name: '', description: '', startDate: '', endDate: '', venue: '', city: '', status: 'PLANNING', budget: '', clientName: '', clientEmail: '', clientPhone: '', type: '', capacity: '' });
+    setEditingId(null);
+    setForm(emptyForm);
     fetchEvents();
+  };
+
+  const openEdit = (e: React.MouseEvent, ev: Event) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setEditingId(ev.id);
+    setForm({
+      name: ev.name,
+      description: ev.description || '',
+      startDate: ev.startDate?.slice(0, 16) || '',
+      endDate: ev.endDate?.slice(0, 16) || '',
+      venue: ev.venue || '',
+      city: ev.city || '',
+      status: ev.status,
+      budget: String(ev.budget || ''),
+      clientName: ev.clientName || '',
+      clientEmail: '',
+      clientPhone: '',
+      type: ev.type || '',
+      capacity: ev.capacity ? String(ev.capacity) : '',
+    });
+    setModalOpen(true);
+  };
+
+  const closeModal = () => {
+    setModalOpen(false);
+    setEditingId(null);
+    setForm(emptyForm);
   };
 
   const deleteEvent = async (e: React.MouseEvent, id: string, name: string) => {
@@ -135,9 +175,14 @@ export default function EventsPage() {
               return (
                 <Link key={event.id} href={`/events/${event.id}`}>
                   <div className="bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-900/20 transition-all group cursor-pointer relative">
-                    <button onClick={(e) => deleteEvent(e, event.id, event.name)} title="Supprimer l'événement" className="absolute top-3 right-3 text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all z-10">
-                      <Trash2 size={14} />
-                    </button>
+                    <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
+                      <button onClick={(e) => openEdit(e, event)} title="Modifier l'événement" className="text-slate-500 hover:text-indigo-400 p-1.5 rounded hover:bg-indigo-500/10">
+                        <Pencil size={14} />
+                      </button>
+                      <button onClick={(e) => deleteEvent(e, event.id, event.name)} title="Supprimer l'événement" className="text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                     <div className="flex items-start justify-between mb-3 pr-8">
                       <span className={`text-xs px-2 py-0.5 rounded-full border ${getStatusColor(event.status)}`}>
                         {getStatusLabel(event.status)}
@@ -199,8 +244,8 @@ export default function EventsPage() {
         )}
       </div>
 
-      {/* Create Event Modal */}
-      <Modal open={modalOpen} onClose={() => setModalOpen(false)} title="Nouvel événement" size="lg">
+      {/* Create/Edit Event Modal */}
+      <Modal open={modalOpen} onClose={closeModal} title={editingId ? "Modifier l'événement" : "Nouvel événement"} size="lg">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
@@ -258,8 +303,8 @@ export default function EventsPage() {
             </div>
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={() => setModalOpen(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">Annuler</button>
-            <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors">Créer l'événement</button>
+            <button type="button" onClick={closeModal} className="px-4 py-2 text-sm text-slate-400 hover:text-white transition-colors">Annuler</button>
+            <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors">{editingId ? 'Enregistrer' : "Créer l'événement"}</button>
           </div>
         </form>
       </Modal>

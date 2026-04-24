@@ -40,6 +40,15 @@ export async function PATCH(req: Request) {
     data: {
       ...(body.status && { status: body.status }),
       ...(body.paidDate && { paidDate: new Date(body.paidDate) }),
+      ...(body.number && { number: body.number }),
+      ...(body.issuer !== undefined && { issuer: body.issuer }),
+      ...(body.recipient !== undefined && { recipient: body.recipient }),
+      ...(body.amount !== undefined && { amount: body.amount }),
+      ...(body.tax !== undefined && { tax: body.tax }),
+      ...(body.type && { type: body.type }),
+      ...(body.dueDate && { dueDate: new Date(body.dueDate) }),
+      ...(body.eventId !== undefined && { eventId: body.eventId || null }),
+      ...(body.notes !== undefined && { notes: body.notes }),
     },
   });
   return NextResponse.json(invoice);

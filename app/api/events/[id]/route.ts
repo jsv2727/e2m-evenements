@@ -22,9 +22,19 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     where: { id: params.id },
     data: {
       ...(body.name && { name: body.name }),
+      ...(body.description !== undefined && { description: body.description }),
       ...(body.status && { status: body.status }),
+      ...(body.type !== undefined && { type: body.type }),
       ...(body.budget !== undefined && { budget: body.budget }),
-      ...(body.venue && { venue: body.venue }),
+      ...(body.capacity !== undefined && { capacity: body.capacity }),
+      ...(body.venue !== undefined && { venue: body.venue }),
+      ...(body.city !== undefined && { city: body.city }),
+      ...(body.clientName !== undefined && { clientName: body.clientName }),
+      ...(body.clientEmail !== undefined && { clientEmail: body.clientEmail }),
+      ...(body.clientPhone !== undefined && { clientPhone: body.clientPhone }),
+      ...(body.startDate && { startDate: new Date(body.startDate) }),
+      ...(body.endDate && { endDate: new Date(body.endDate) }),
+      ...(body.notes !== undefined && { notes: body.notes }),
     },
   });
   return NextResponse.json(event);

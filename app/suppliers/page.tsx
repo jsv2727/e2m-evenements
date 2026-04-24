@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Modal from '@/components/Modal';
 import { getStatusColor, getStatusLabel } from '@/lib/utils';
-import { Plus, Star, Phone, Mail, Globe, Truck, Search, Bot, Trash2 } from 'lucide-react';
+import { Plus, Star, Phone, Mail, Globe, Truck, Search, Bot, Trash2, Pencil } from 'lucide-react';
 
 type Supplier = {
   id: string; name: string; category: string; email?: string; phone?: string;
@@ -23,11 +23,13 @@ export default function SuppliersPage() {
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('');
   const [modal, setModal] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [aiModal, setAiModal] = useState(false);
   const [aiQuery, setAiQuery] = useState('');
   const [aiResponse, setAiResponse] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
-  const [form, setForm] = useState({ name: '', category: '', email: '', phone: '', address: '', website: '', contactName: '', rating: '5', notes: '' });
+  const emptyForm = { name: '', category: '', email: '', phone: '', address: '', website: '', contactName: '', rating: '5', notes: '' };
+  const [form, setForm] = useState(emptyForm);
 
   const fetchSuppliers = async () => {
     const r = await fetch('/api/suppliers');
@@ -40,14 +42,44 @@ export default function SuppliersPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch('/api/suppliers', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, rating: parseInt(form.rating) }),
-    });
-    setModal(false);
-    setForm({ name: '', category: '', email: '', phone: '', address: '', website: '', contactName: '', rating: '5', notes: '' });
+    const payload = { ...form, rating: parseInt(form.rating) };
+    if (editingId) {
+      await fetch('/api/suppliers', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingId, ...payload }),
+      });
+    } else {
+      await fetch('/api/suppliers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    }
+    closeModal();
     fetchSuppliers();
+  };
+
+  const openEdit = (s: Supplier) => {
+    setEditingId(s.id);
+    setForm({
+      name: s.name,
+      category: s.category,
+      email: s.email || '',
+      phone: s.phone || '',
+      address: s.address || '',
+      website: s.website || '',
+      contactName: s.contactName || '',
+      rating: String(s.rating ?? 5),
+      notes: s.notes || '',
+    });
+    setModal(true);
+  };
+
+  const closeModal = () => {
+    setModal(false);
+    setEditingId(null);
+    setForm(emptyForm);
   };
 
   const askAi = async () => {
@@ -120,9 +152,14 @@ export default function SuppliersPage() {
           {loading ? [1, 2, 3].map(i => <div key={i} className="h-40 bg-slate-900 border border-slate-800 rounded-xl animate-pulse" />) :
             filtered.map(s => (
               <div key={s.id} className="group relative bg-slate-900 border border-slate-800 rounded-xl p-5 hover:border-slate-700 transition-all">
-                <button onClick={() => deleteSupplier(s.id, s.name)} title="Supprimer le fournisseur" className="absolute top-3 right-3 text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10 opacity-0 group-hover:opacity-100 transition-all">
-                  <Trash2 size={14} />
-                </button>
+                <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                  <button onClick={() => openEdit(s)} title="Modifier le fournisseur" className="text-slate-500 hover:text-indigo-400 p-1.5 rounded hover:bg-indigo-500/10">
+                    <Pencil size={14} />
+                  </button>
+                  <button onClick={() => deleteSupplier(s.id, s.name)} title="Supprimer le fournisseur" className="text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
                 <div className="flex items-start justify-between mb-3 pr-8">
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-white truncate">{s.name}</h3>
@@ -169,8 +206,8 @@ export default function SuppliersPage() {
         </div>
       </div>
 
-      {/* New Supplier Modal */}
-      <Modal open={modal} onClose={() => setModal(false)} title="Nouveau fournisseur" size="lg">
+      {/* New/Edit Supplier Modal */}
+      <Modal open={modal} onClose={closeModal} title={editingId ? 'Modifier le fournisseur' : 'Nouveau fournisseur'} size="lg">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -216,8 +253,8 @@ export default function SuppliersPage() {
             </div>
           </div>
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={() => setModal(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">Annuler</button>
-            <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg">Ajouter</button>
+            <button type="button" onClick={closeModal} className="px-4 py-2 text-sm text-slate-400 hover:text-white">Annuler</button>
+            <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg">{editingId ? 'Enregistrer' : 'Ajouter'}</button>
           </div>
         </form>
       </Modal>

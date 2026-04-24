@@ -5,7 +5,7 @@ import Header from '@/components/Header';
 import Modal from '@/components/Modal';
 import FileUpload from '@/components/FileUpload';
 import { getStatusColor, getStatusLabel } from '@/lib/utils';
-import { Users, Search, Mail, Phone, Upload, Trash2 } from 'lucide-react';
+import { Users, Search, Mail, Phone, Upload, Trash2, Pencil } from 'lucide-react';
 
 type Guest = {
   id: string; firstName: string; lastName: string; email: string; phone?: string;
@@ -21,6 +21,8 @@ export default function GuestsPage() {
   const [events, setEvents] = useState<{ id: string; name: string }[]>([]);
   const [importEventId, setImportEventId] = useState('');
   const [importResult, setImportResult] = useState<{ count: number } | null>(null);
+  const [editModal, setEditModal] = useState(false);
+  const [editForm, setEditForm] = useState({ id: '', firstName: '', lastName: '', email: '', phone: '', company: '', status: 'INVITED' });
 
   const fetchGuests = () =>
     fetch('/api/guests').then(r => r.json()).then(data => { setGuests(data); setLoading(false); });
@@ -68,6 +70,30 @@ export default function GuestsPage() {
   const deleteGuest = async (id: string, name: string) => {
     if (!confirm(`Supprimer l'invité "${name}" ? Cette action est irréversible.`)) return;
     await fetch(`/api/guests?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    fetchGuests();
+  };
+
+  const openEditGuest = (g: Guest) => {
+    setEditForm({
+      id: g.id,
+      firstName: g.firstName,
+      lastName: g.lastName,
+      email: g.email,
+      phone: g.phone || '',
+      company: g.company || '',
+      status: g.status,
+    });
+    setEditModal(true);
+  };
+
+  const saveGuest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await fetch('/api/guests', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(editForm),
+    });
+    setEditModal(false);
     fetchGuests();
   };
 
@@ -165,9 +191,14 @@ export default function GuestsPage() {
                     </select>
                   </td>
                   <td className="p-4 text-right">
-                    <button onClick={() => deleteGuest(g.id, `${g.firstName} ${g.lastName}`)} title="Supprimer l'invité" className="text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10 transition-colors">
-                      <Trash2 size={14} />
-                    </button>
+                    <div className="inline-flex gap-1">
+                      <button onClick={() => openEditGuest(g)} title="Modifier l'invité" className="text-slate-500 hover:text-indigo-400 p-1.5 rounded hover:bg-indigo-500/10 transition-colors">
+                        <Pencil size={14} />
+                      </button>
+                      <button onClick={() => deleteGuest(g.id, `${g.firstName} ${g.lastName}`)} title="Supprimer l'invité" className="text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10 transition-colors">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -218,6 +249,51 @@ export default function GuestsPage() {
             </div>
           )}
         </div>
+      </Modal>
+
+      <Modal open={editModal} onClose={() => setEditModal(false)} title="Modifier l'invité" size="md">
+        <form onSubmit={saveGuest} className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Prénom *</label>
+              <input required value={editForm.firstName} onChange={e => setEditForm({ ...editForm, firstName: e.target.value })}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Nom *</label>
+              <input required value={editForm.lastName} onChange={e => setEditForm({ ...editForm, lastName: e.target.value })}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Courriel *</label>
+              <input required type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Téléphone</label>
+              <input value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: e.target.value })}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Entreprise</label>
+              <input value={editForm.company} onChange={e => setEditForm({ ...editForm, company: e.target.value })}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500" />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Statut</label>
+              <select value={editForm.status} onChange={e => setEditForm({ ...editForm, status: e.target.value })}
+                className="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:border-indigo-500">
+                {['INVITED', 'CONFIRMED', 'DECLINED', 'ATTENDED', 'NO_SHOW'].map(s => (
+                  <option key={s} value={s}>{getStatusLabel(s)}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={() => setEditModal(false)} className="px-4 py-2 text-sm text-slate-400">Annuler</button>
+            <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg">Enregistrer</button>
+          </div>
+        </form>
       </Modal>
     </div>
   );

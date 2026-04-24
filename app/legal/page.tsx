@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Modal from '@/components/Modal';
 import { formatCurrency, formatDate, getStatusColor, getStatusLabel } from '@/lib/utils';
-import { Plus, FileText, Bot, AlertTriangle, CheckCircle2, Loader2, Upload, Trash2 } from 'lucide-react';
+import { Plus, FileText, Bot, AlertTriangle, CheckCircle2, Loader2, Upload, Trash2, Pencil } from 'lucide-react';
 import FileUpload from '@/components/FileUpload';
 
 type Contract = {
@@ -41,7 +41,9 @@ export default function LegalPage() {
   const [reviewing, setReviewing] = useState(false);
   const [generating, setGenerating] = useState(false);
 
-  const [form, setForm] = useState({ title: '', type: 'SERVICE', partyA: 'Événements 2M Inc.', partyB: '', value: '', content: '', startDate: '', endDate: '' });
+  const emptyForm = { title: '', type: 'SERVICE', partyA: 'Événements 2M Inc.', partyB: '', value: '', content: '', startDate: '', endDate: '' };
+  const [form, setForm] = useState(emptyForm);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [genForm, setGenForm] = useState({ type: 'SERVICE', partyA: 'Événements 2M Inc.', partyB: '', eventDescription: '', value: '', specificTerms: '' });
 
   const fetchContracts = async () => {
@@ -54,13 +56,43 @@ export default function LegalPage() {
 
   const createContract = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch('/api/legal/contracts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...form, value: parseFloat(form.value) || null }),
-    });
-    setCreateModal(false);
+    const payload = { ...form, value: parseFloat(form.value) || null };
+    if (editingId) {
+      await fetch('/api/legal/contracts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingId, ...payload }),
+      });
+    } else {
+      await fetch('/api/legal/contracts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    }
+    closeCreate();
     fetchContracts();
+  };
+
+  const openEdit = (c: Contract) => {
+    setEditingId(c.id);
+    setForm({
+      title: c.title,
+      type: c.type,
+      partyA: c.partyA || 'Événements 2M Inc.',
+      partyB: c.partyB || '',
+      value: c.value ? String(c.value) : '',
+      content: c.content,
+      startDate: c.startDate ? c.startDate.slice(0, 10) : '',
+      endDate: c.endDate ? c.endDate.slice(0, 10) : '',
+    });
+    setCreateModal(true);
+  };
+
+  const closeCreate = () => {
+    setCreateModal(false);
+    setEditingId(null);
+    setForm(emptyForm);
   };
 
   const generateContract = async (e: React.FormEvent) => {
@@ -205,6 +237,10 @@ export default function LegalPage() {
                       <CheckCircle2 size={14} /> Marquer signé
                     </button>
                   )}
+                  <button onClick={() => openEdit(selected)} title="Modifier le contrat"
+                    className="flex items-center gap-1.5 px-3 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 border border-slate-600 text-sm rounded-lg transition-colors">
+                    <Pencil size={14} /> Modifier
+                  </button>
                   <button onClick={() => deleteContract(selected.id, selected.title)} title="Supprimer le contrat"
                     className="flex items-center gap-1.5 px-3 py-2 bg-red-600/10 hover:bg-red-600/20 text-red-400 border border-red-500/20 text-sm rounded-lg transition-colors">
                     <Trash2 size={14} /> Supprimer
@@ -265,8 +301,8 @@ export default function LegalPage() {
         </div>
       </div>
 
-      {/* Create Contract Modal */}
-      <Modal open={createModal} onClose={() => setCreateModal(false)} title="Nouveau contrat" size="xl">
+      {/* Create/Edit Contract Modal */}
+      <Modal open={createModal} onClose={closeCreate} title={editingId ? 'Modifier le contrat' : 'Nouveau contrat'} size="xl">
         <form onSubmit={createContract} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div className="col-span-2">
@@ -305,8 +341,8 @@ export default function LegalPage() {
             </div>
           </div>
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={() => setCreateModal(false)} className="px-4 py-2 text-sm text-slate-400">Annuler</button>
-            <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg">Créer</button>
+            <button type="button" onClick={closeCreate} className="px-4 py-2 text-sm text-slate-400">Annuler</button>
+            <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg">{editingId ? 'Enregistrer' : 'Créer'}</button>
           </div>
         </form>
       </Modal>

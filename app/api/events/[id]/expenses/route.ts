@@ -17,6 +17,22 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   return NextResponse.json(expense);
 }
 
+export async function PATCH(req: Request) {
+  const body = await req.json();
+  const expense = await db.expense.update({
+    where: { id: body.id },
+    data: {
+      ...(body.description && { description: body.description }),
+      ...(body.amount !== undefined && { amount: body.amount }),
+      ...(body.category && { category: body.category }),
+      ...(body.date && { date: new Date(body.date) }),
+      ...(body.vendor !== undefined && { vendor: body.vendor }),
+      ...(body.notes !== undefined && { notes: body.notes }),
+    },
+  });
+  return NextResponse.json(expense);
+}
+
 export async function DELETE(req: Request) {
   const { searchParams } = new URL(req.url);
   const expenseId = searchParams.get('expenseId');

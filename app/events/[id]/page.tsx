@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import Header from '@/components/Header';
 import Modal from '@/components/Modal';
 import { formatCurrency, formatDate, getDaysUntil, getStatusColor, getStatusLabel, calculateBudgetUsage } from '@/lib/utils';
-import { CheckCircle2, Circle, Plus, Trash2, Users, DollarSign, FileText, Calendar, ArrowLeft, Bot, ChevronRight, ChevronDown, Check } from 'lucide-react';
+import { CheckCircle2, Circle, Plus, Trash2, Users, DollarSign, FileText, Calendar, ArrowLeft, Bot, ChevronRight, ChevronDown, Check, Pencil } from 'lucide-react';
 import Link from 'next/link';
 
 const EVENT_STATUSES = ['PLANNING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
@@ -37,9 +37,14 @@ export default function EventDetailPage() {
   const [taskModal, setTaskModal] = useState(false);
   const [guestModal, setGuestModal] = useState(false);
   const [expenseModal, setExpenseModal] = useState(false);
+  const [infoModal, setInfoModal] = useState(false);
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editingGuestId, setEditingGuestId] = useState<string | null>(null);
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
   const [taskForm, setTaskForm] = useState({ title: '', priority: 'MEDIUM', dueDate: '', assignee: '' });
   const [guestForm, setGuestForm] = useState({ firstName: '', lastName: '', email: '', phone: '', company: '', status: 'INVITED' });
   const [expenseForm, setExpenseForm] = useState({ description: '', amount: '', category: 'Venue', date: new Date().toISOString().split('T')[0], vendor: '' });
+  const [infoForm, setInfoForm] = useState({ name: '', description: '', startDate: '', endDate: '', venue: '', city: '', type: '', capacity: '', budget: '', clientName: '', clientEmail: '', clientPhone: '' });
   const [aiSuggestion, setAiSuggestion] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
@@ -87,16 +92,36 @@ export default function EventDetailPage() {
 
   useEffect(() => { fetchEvent(); }, [id]);
 
-  const addTask = async (e: React.FormEvent) => {
+  const saveTask = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch(`/api/events/${id}/tasks`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(taskForm),
-    });
+    if (editingTaskId) {
+      await fetch(`/api/events/${id}/tasks`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingTaskId, ...taskForm }),
+      });
+    } else {
+      await fetch(`/api/events/${id}/tasks`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(taskForm),
+      });
+    }
     setTaskModal(false);
+    setEditingTaskId(null);
     setTaskForm({ title: '', priority: 'MEDIUM', dueDate: '', assignee: '' });
     fetchEvent();
+  };
+
+  const openEditTask = (t: Task) => {
+    setEditingTaskId(t.id);
+    setTaskForm({
+      title: t.title,
+      priority: t.priority,
+      dueDate: t.dueDate ? t.dueDate.slice(0, 10) : '',
+      assignee: t.assignee || '',
+    });
+    setTaskModal(true);
   };
 
   const toggleTask = async (taskId: string, currentStatus: string) => {
@@ -135,28 +160,106 @@ export default function EventDetailPage() {
     fetchEvent();
   };
 
-  const addGuest = async (e: React.FormEvent) => {
+  const saveGuest = async (e: React.FormEvent) => {
     e.preventDefault();
-    await fetch(`/api/events/${id}/guests`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(guestForm),
-    });
+    if (editingGuestId) {
+      await fetch(`/api/events/${id}/guests`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingGuestId, ...guestForm }),
+      });
+    } else {
+      await fetch(`/api/events/${id}/guests`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(guestForm),
+      });
+    }
     setGuestModal(false);
+    setEditingGuestId(null);
     setGuestForm({ firstName: '', lastName: '', email: '', phone: '', company: '', status: 'INVITED' });
     fetchEvent();
   };
 
-  const addExpense = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await fetch(`/api/events/${id}/expenses`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...expenseForm, amount: parseFloat(expenseForm.amount) }),
+  const openEditGuest = (g: Guest) => {
+    setEditingGuestId(g.id);
+    setGuestForm({
+      firstName: g.firstName,
+      lastName: g.lastName,
+      email: g.email,
+      phone: '',
+      company: g.company || '',
+      status: g.status,
     });
+    setGuestModal(true);
+  };
+
+  const saveExpense = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const payload = { ...expenseForm, amount: parseFloat(expenseForm.amount) };
+    if (editingExpenseId) {
+      await fetch(`/api/events/${id}/expenses`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editingExpenseId, ...payload }),
+      });
+    } else {
+      await fetch(`/api/events/${id}/expenses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+    }
     setExpenseModal(false);
+    setEditingExpenseId(null);
     setExpenseForm({ description: '', amount: '', category: 'Venue', date: new Date().toISOString().split('T')[0], vendor: '' });
     fetchEvent();
+  };
+
+  const openEditExpense = (x: Expense) => {
+    setEditingExpenseId(x.id);
+    setExpenseForm({
+      description: x.description,
+      amount: String(x.amount),
+      category: x.category,
+      date: x.date.slice(0, 10),
+      vendor: x.vendor || '',
+    });
+    setExpenseModal(true);
+  };
+
+  const saveInfo = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await fetch(`/api/events/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...infoForm,
+        budget: parseFloat(infoForm.budget) || 0,
+        capacity: parseInt(infoForm.capacity) || null,
+      }),
+    });
+    setInfoModal(false);
+    fetchEvent();
+  };
+
+  const openEditInfo = () => {
+    if (!event) return;
+    setInfoForm({
+      name: event.name,
+      description: event.description || '',
+      startDate: event.startDate?.slice(0, 16) || '',
+      endDate: event.endDate?.slice(0, 16) || '',
+      venue: event.venue || '',
+      city: event.city || '',
+      type: event.type || '',
+      capacity: event.capacity ? String(event.capacity) : '',
+      budget: String(event.budget || ''),
+      clientName: event.clientName || '',
+      clientEmail: event.clientEmail || '',
+      clientPhone: '',
+    });
+    setInfoModal(true);
   };
 
   const getAiSuggestions = async () => {
@@ -200,6 +303,10 @@ export default function EventDetailPage() {
         subtitle={event.clientName ? `Client: ${event.clientName}` : formatDate(event.startDate)}
         actions={
           <div className="flex items-center gap-2">
+            <button onClick={openEditInfo} title="Modifier l'événement"
+              className="flex items-center gap-1 text-sm text-slate-400 hover:text-white px-3 py-1.5 rounded-lg hover:bg-slate-800 transition-all">
+              <Pencil size={14} /> Modifier
+            </button>
             <div className="relative" ref={statusMenuRef}>
               <button
                 type="button"
@@ -337,9 +444,14 @@ export default function EventDetailPage() {
                         {task.dueDate && <span className={`text-xs ${getDaysUntil(task.dueDate) < 0 ? 'text-red-400' : 'text-slate-500'}`}>{formatDate(task.dueDate)}</span>}
                       </div>
                     </div>
-                    <button onClick={() => deleteTask(task.id, task.title)} title="Supprimer" className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10 transition-all">
-                      <Trash2 size={14} />
-                    </button>
+                    <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                      <button onClick={() => openEditTask(task)} title="Modifier" className="text-slate-500 hover:text-indigo-400 p-1.5 rounded hover:bg-indigo-500/10">
+                        <Pencil size={14} />
+                      </button>
+                      <button onClick={() => deleteTask(task.id, task.title)} title="Supprimer" className="text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                 ))
               )}
@@ -390,9 +502,14 @@ export default function EventDetailPage() {
                         </select>
                       </td>
                       <td className="py-2.5 text-right">
-                        <button onClick={() => deleteGuest(g.id, `${g.firstName} ${g.lastName}`)} title="Supprimer" className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10 transition-all">
-                          <Trash2 size={14} />
-                        </button>
+                        <div className="inline-flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                          <button onClick={() => openEditGuest(g)} title="Modifier" className="text-slate-500 hover:text-indigo-400 p-1.5 rounded hover:bg-indigo-500/10">
+                            <Pencil size={14} />
+                          </button>
+                          <button onClick={() => deleteGuest(g.id, `${g.firstName} ${g.lastName}`)} title="Supprimer" className="text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -445,9 +562,14 @@ export default function EventDetailPage() {
                         <td className="py-2.5 text-slate-400">{formatDate(exp.date)}</td>
                         <td className="py-2.5 text-right text-amber-400 font-medium">{formatCurrency(exp.amount)}</td>
                         <td className="py-2.5 text-right">
-                          <button onClick={() => deleteExpense(exp.id, exp.description)} title="Supprimer" className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10 transition-all">
-                            <Trash2 size={14} />
-                          </button>
+                          <div className="inline-flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                            <button onClick={() => openEditExpense(exp)} title="Modifier" className="text-slate-500 hover:text-indigo-400 p-1.5 rounded hover:bg-indigo-500/10">
+                              <Pencil size={14} />
+                            </button>
+                            <button onClick={() => deleteExpense(exp.id, exp.description)} title="Supprimer" className="text-slate-500 hover:text-red-400 p-1.5 rounded hover:bg-red-500/10">
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -461,8 +583,8 @@ export default function EventDetailPage() {
       </div>
 
       {/* Task Modal */}
-      <Modal open={taskModal} onClose={() => setTaskModal(false)} title="Nouvelle tâche" size="sm">
-        <form onSubmit={addTask} className="space-y-4">
+      <Modal open={taskModal} onClose={() => { setTaskModal(false); setEditingTaskId(null); setTaskForm({ title: '', priority: 'MEDIUM', dueDate: '', assignee: '' }); }} title={editingTaskId ? 'Modifier la tâche' : 'Nouvelle tâche'} size="sm">
+        <form onSubmit={saveTask} className="space-y-4">
           <div>
             <label className={labelCls}>Titre *</label>
             <input required className={inputCls} placeholder="Titre de la tâche" value={taskForm.title} onChange={e => setTaskForm({ ...taskForm, title: e.target.value })} />
@@ -484,15 +606,15 @@ export default function EventDetailPage() {
             <input type="date" className={inputCls} value={taskForm.dueDate} onChange={e => setTaskForm({ ...taskForm, dueDate: e.target.value })} />
           </div>
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={() => setTaskModal(false)} className="px-4 py-2 text-sm text-slate-400 hover:text-white">Annuler</button>
-            <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg">Ajouter</button>
+            <button type="button" onClick={() => { setTaskModal(false); setEditingTaskId(null); setTaskForm({ title: '', priority: 'MEDIUM', dueDate: '', assignee: '' }); }} className="px-4 py-2 text-sm text-slate-400 hover:text-white">Annuler</button>
+            <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg">{editingTaskId ? 'Enregistrer' : 'Ajouter'}</button>
           </div>
         </form>
       </Modal>
 
       {/* Guest Modal */}
-      <Modal open={guestModal} onClose={() => setGuestModal(false)} title="Ajouter un invité" size="md">
-        <form onSubmit={addGuest} className="space-y-4">
+      <Modal open={guestModal} onClose={() => { setGuestModal(false); setEditingGuestId(null); setGuestForm({ firstName: '', lastName: '', email: '', phone: '', company: '', status: 'INVITED' }); }} title={editingGuestId ? "Modifier l'invité" : "Ajouter un invité"} size="md">
+        <form onSubmit={saveGuest} className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={labelCls}>Prénom *</label>
@@ -522,15 +644,15 @@ export default function EventDetailPage() {
             </div>
           </div>
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={() => setGuestModal(false)} className="px-4 py-2 text-sm text-slate-400">Annuler</button>
-            <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg">Ajouter</button>
+            <button type="button" onClick={() => { setGuestModal(false); setEditingGuestId(null); setGuestForm({ firstName: '', lastName: '', email: '', phone: '', company: '', status: 'INVITED' }); }} className="px-4 py-2 text-sm text-slate-400">Annuler</button>
+            <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg">{editingGuestId ? 'Enregistrer' : 'Ajouter'}</button>
           </div>
         </form>
       </Modal>
 
       {/* Expense Modal */}
-      <Modal open={expenseModal} onClose={() => setExpenseModal(false)} title="Nouvelle dépense" size="md">
-        <form onSubmit={addExpense} className="space-y-4">
+      <Modal open={expenseModal} onClose={() => { setExpenseModal(false); setEditingExpenseId(null); setExpenseForm({ description: '', amount: '', category: 'Venue', date: new Date().toISOString().split('T')[0], vendor: '' }); }} title={editingExpenseId ? 'Modifier la dépense' : 'Nouvelle dépense'} size="md">
+        <form onSubmit={saveExpense} className="space-y-4">
           <div>
             <label className={labelCls}>Description *</label>
             <input required className={inputCls} placeholder="Description" value={expenseForm.description} onChange={e => setExpenseForm({ ...expenseForm, description: e.target.value })} />
@@ -556,8 +678,64 @@ export default function EventDetailPage() {
             </div>
           </div>
           <div className="flex justify-end gap-3">
-            <button type="button" onClick={() => setExpenseModal(false)} className="px-4 py-2 text-sm text-slate-400">Annuler</button>
-            <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg">Ajouter</button>
+            <button type="button" onClick={() => { setExpenseModal(false); setEditingExpenseId(null); setExpenseForm({ description: '', amount: '', category: 'Venue', date: new Date().toISOString().split('T')[0], vendor: '' }); }} className="px-4 py-2 text-sm text-slate-400">Annuler</button>
+            <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg">{editingExpenseId ? 'Enregistrer' : 'Ajouter'}</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Event Info Edit Modal */}
+      <Modal open={infoModal} onClose={() => setInfoModal(false)} title="Modifier les informations de l'événement" size="lg">
+        <form onSubmit={saveInfo} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className={labelCls}>Nom *</label>
+              <input required className={inputCls} value={infoForm.name} onChange={e => setInfoForm({ ...infoForm, name: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelCls}>Type</label>
+              <input className={inputCls} value={infoForm.type} onChange={e => setInfoForm({ ...infoForm, type: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelCls}>Capacité</label>
+              <input type="number" className={inputCls} value={infoForm.capacity} onChange={e => setInfoForm({ ...infoForm, capacity: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelCls}>Date de début *</label>
+              <input required type="datetime-local" className={inputCls} value={infoForm.startDate} onChange={e => setInfoForm({ ...infoForm, startDate: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelCls}>Date de fin *</label>
+              <input required type="datetime-local" className={inputCls} value={infoForm.endDate} onChange={e => setInfoForm({ ...infoForm, endDate: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelCls}>Lieu</label>
+              <input className={inputCls} value={infoForm.venue} onChange={e => setInfoForm({ ...infoForm, venue: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelCls}>Ville</label>
+              <input className={inputCls} value={infoForm.city} onChange={e => setInfoForm({ ...infoForm, city: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelCls}>Budget ($)</label>
+              <input type="number" step="0.01" className={inputCls} value={infoForm.budget} onChange={e => setInfoForm({ ...infoForm, budget: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelCls}>Client</label>
+              <input className={inputCls} value={infoForm.clientName} onChange={e => setInfoForm({ ...infoForm, clientName: e.target.value })} />
+            </div>
+            <div>
+              <label className={labelCls}>Courriel client</label>
+              <input type="email" className={inputCls} value={infoForm.clientEmail} onChange={e => setInfoForm({ ...infoForm, clientEmail: e.target.value })} />
+            </div>
+            <div className="col-span-2">
+              <label className={labelCls}>Description</label>
+              <textarea className={inputCls} rows={3} value={infoForm.description} onChange={e => setInfoForm({ ...infoForm, description: e.target.value })} />
+            </div>
+          </div>
+          <div className="flex justify-end gap-3">
+            <button type="button" onClick={() => setInfoModal(false)} className="px-4 py-2 text-sm text-slate-400">Annuler</button>
+            <button type="submit" className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg">Enregistrer</button>
           </div>
         </form>
       </Modal>
