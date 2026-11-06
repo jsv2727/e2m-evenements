@@ -280,6 +280,18 @@ export default function CalendarApp() {
     [reload],
   );
 
+  /** Lien d'abonnement privé : les agendas externes n'envoient pas de cookie, d'où le jeton. */
+  const copyFeedUrl = useCallback(async () => {
+    try {
+      const { token } = await requestJson<{ token: string }>('/api/auth/ics-token');
+      const url = `${window.location.origin}/api/calendar/ics?token=${encodeURIComponent(token)}`;
+      await navigator.clipboard.writeText(url);
+      setToast({ kind: 'ok', text: "Lien d'abonnement copié — à garder interne à l'équipe" });
+    } catch (e) {
+      setToast({ kind: 'error', text: (e as Error).message || 'Copie impossible' });
+    }
+  }, []);
+
   const openActivity = useCallback((a: CalendarActivity) => router.push(`/events/${a.id}`), [router]);
   const goToday = useCallback(() => today && setAnchor(today), [today]);
 
@@ -330,13 +342,14 @@ export default function CalendarApp() {
         subtitle="Rétroplanning et échéances de toutes les activités 2M"
         actions={
           <div className="hidden items-center gap-2 lg:flex">
-            <a
-              href="/api/calendar/ics"
-              title="Flux iCalendar — abonnement Google Agenda, Outlook ou Apple Calendrier"
+            <button
+              type="button"
+              onClick={copyFeedUrl}
+              title="Copie le lien d'abonnement privé (Google Agenda, Outlook, Apple Calendrier)"
               className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-700 px-3 text-xs font-medium text-slate-300 hover:border-slate-600 hover:text-white"
             >
-              <Rss size={14} /> Export iCal
-            </a>
+              <Rss size={14} /> Abonnement iCal
+            </button>
             <Link href="/calendar/templates" className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-700 px-3 text-xs font-medium text-slate-300 hover:border-slate-600 hover:text-white">
               <Layers3 size={14} /> Modèles
             </Link>

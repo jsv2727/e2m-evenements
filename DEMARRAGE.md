@@ -9,7 +9,17 @@ ANTHROPIC_API_KEY="sk-ant-votre-cle-ici"
 
 Obtenez votre clé sur: https://console.anthropic.com
 
-## 2. Démarrer l'application
+## 2. Accès réservé à l'équipe 2M
+
+Toute l'application est protégée par un mot de passe d'équipe. Définir dans `.env` (et dans Railway → Variables) :
+```
+TEAM_PASSWORD="le-mot-de-passe-de-l-equipe"
+AUTH_SECRET="chaine-aleatoire-d-au-moins-32-caracteres"
+```
+Sans ces deux variables, personne ne peut se connecter (accès fermé par défaut).
+Changer `TEAM_PASSWORD` déconnecte immédiatement tout le monde (à faire quand quelqu'un quitte l'équipe).
+
+## 2 bis. Démarrer l'application
 
 ```bash
 npm run dev
@@ -37,7 +47,7 @@ Ouvrez votre navigateur sur: http://localhost:3000
 - Pour une activité existante : bouton **Rétroplanning** (onglet Tâches) ou **Appliquer un rétroplanning** dans le calendrier. Réappliquer ne crée pas de doublons.
 - Modèles fournis : Bateaux dragon, Gala, Conférence, Activité standard — modifiables dans `/calendar/templates`.
 - Glisser-déposer une tâche pour la replanifier. Raccourcis : ← → (période), T (aujourd'hui), M / S / A / R (vues), N (nouvelle tâche).
-- Abonnement Google Agenda / Outlook : ajouter l'URL `https://<votre-domaine>/api/calendar/ics`.
+- Abonnement Google Agenda / Outlook : bouton **Abonnement iCal** du calendrier (copie un lien privé à garder interne).
 
 ## 5. IA — Auto-mise à jour des modèles
 
