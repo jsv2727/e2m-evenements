@@ -11,6 +11,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       priority: body.priority || 'MEDIUM',
       dueDate: body.dueDate ? new Date(body.dueDate) : null,
       assignee: body.assignee,
+      category: body.category || null,
+      completedAt: body.status === 'DONE' ? new Date() : null,
       eventId: params.id,
     },
   });
@@ -22,7 +24,8 @@ export async function PATCH(req: Request) {
   const task = await db.task.update({
     where: { id: body.id },
     data: {
-      ...(body.status && { status: body.status }),
+      ...(body.status && { status: body.status, completedAt: body.status === 'DONE' ? new Date() : null }),
+      ...(body.category !== undefined && { category: body.category || null }),
       ...(body.title && { title: body.title }),
       ...(body.description !== undefined && { description: body.description }),
       ...(body.priority && { priority: body.priority }),

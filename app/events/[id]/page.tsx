@@ -7,6 +7,7 @@ import Modal from '@/components/Modal';
 import { formatCurrency, formatDate, getDaysUntil, getStatusColor, getStatusLabel, calculateBudgetUsage } from '@/lib/utils';
 import { CheckCircle2, Circle, Plus, Trash2, Users, DollarSign, FileText, Calendar, ArrowLeft, Bot, ChevronRight, ChevronDown, Check, Pencil } from 'lucide-react';
 import Link from 'next/link';
+import ApplyTemplateModal from '@/components/calendar/ApplyTemplateModal';
 
 const EVENT_STATUSES = ['PLANNING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
 
@@ -49,6 +50,8 @@ export default function EventDetailPage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
   const [statusUpdating, setStatusUpdating] = useState(false);
+  const [templateModal, setTemplateModal] = useState(false);
+  const [templateResult, setTemplateResult] = useState<string | null>(null);
   const statusMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -422,10 +425,19 @@ export default function EventDetailPage() {
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-5">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-semibold text-white">Tâches ({event.tasks.length})</h3>
-              <button onClick={() => setTaskModal(true)} className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors">
-                <Plus size={12} /> Ajouter
-              </button>
+              <div className="flex items-center gap-2">
+                <Link href={`/calendar?vue=timeline&date=${event.startDate.slice(0, 10)}`} className="text-xs px-3 py-1.5 text-slate-400 hover:text-white rounded-lg transition-colors">
+                  Voir au calendrier
+                </Link>
+                <button onClick={() => { setTemplateResult(null); setTemplateModal(true); }} className="flex items-center gap-1.5 text-xs px-3 py-1.5 border border-indigo-500/40 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-200 rounded-lg transition-colors">
+                  <Calendar size={12} /> Rétroplanning
+                </button>
+                <button onClick={() => setTaskModal(true)} className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition-colors">
+                  <Plus size={12} /> Ajouter
+                </button>
+              </div>
             </div>
+            {templateResult && <p className="mb-3 rounded-lg bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">{templateResult}</p>}
             <div className="space-y-2">
               {event.tasks.length === 0 && <p className="text-slate-500 text-sm text-center py-8">Aucune tâche. Ajoutez-en une!</p>}
               {['URGENT', 'HIGH', 'MEDIUM', 'LOW'].map(priority =>
@@ -739,6 +751,18 @@ export default function EventDetailPage() {
           </div>
         </form>
       </Modal>
+
+      <ApplyTemplateModal
+        open={templateModal}
+        events={[{ id: event.id, name: event.name, startDate: event.startDate, type: event.type ?? null }]}
+        fixedEventId={event.id}
+        onClose={() => setTemplateModal(false)}
+        onApplied={({ created, skipped }) => {
+          setTemplateModal(false);
+          setTemplateResult(`${created} tâche(s) générée(s)${skipped ? `, ${skipped} déjà existante(s)` : ''}.`);
+          fetchEvent();
+        }}
+      />
     </div>
   );
 }

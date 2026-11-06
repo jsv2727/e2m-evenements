@@ -59,10 +59,43 @@ model Task {
   dueDate     DateTime?
   priority    String   @default("MEDIUM")
   assignee    String?
+  category    String?
+  completedAt DateTime?
   eventId     String
   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@index([eventId])
+  @@index([dueDate])
+}
+
+/// Modèle de rétroplanning : liste de tâches types positionnées
+/// relativement à la date de début d'une activité (offsetDays, J-x / J+x).
+model TaskTemplate {
+  id          String             @id @default(cuid())
+  name        String             @unique
+  eventType   String?
+  description String?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  items       TaskTemplateItem[]
+}
+
+model TaskTemplateItem {
+  id          String       @id @default(cuid())
+  templateId  String
+  template    TaskTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  offsetDays  Int
+  priority    String       @default("MEDIUM")
+  category    String?
+  assignee    String?
+  sortOrder   Int          @default(0)
+
+  @@index([templateId])
 }
 
 model Guest {

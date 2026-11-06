@@ -22,6 +22,8 @@ Ouvrez votre navigateur sur: http://localhost:3000
 | Module | URL | Description |
 |--------|-----|-------------|
 | Tableau de bord | / | Vue d'ensemble, KPIs, alertes |
+| Calendrier | /calendar | Calendrier des activités : vues Mois / Semaine / Agenda / Rétroplanning, échéances, retards, export iCal |
+| Modèles de rétroplanning | /calendar/templates | Listes de tâches types (J-x / J+x) appliquées automatiquement aux activités |
 | Événements | /events | Gestion complète des événements |
 | Fournisseurs | /suppliers | Base de fournisseurs |
 | Invités | /guests | Gestion des invités |
@@ -29,15 +31,25 @@ Ouvrez votre navigateur sur: http://localhost:3000
 | Comptabilité | /accounting | Budget, dépenses, factures |
 | Assistant IA | /ai | Chat IA spécialisé par module |
 
-## 4. IA — Auto-mise à jour des modèles
+## 4. Calendrier et rétroplannings
+
+- À la création d'une activité, choisir un **rétroplanning** : toutes les tâches sont générées et datées par rapport à la date de début (ex. « Envoyer les invitations Bateaux dragon » à J-75).
+- Pour une activité existante : bouton **Rétroplanning** (onglet Tâches) ou **Appliquer un rétroplanning** dans le calendrier. Réappliquer ne crée pas de doublons.
+- Modèles fournis : Bateaux dragon, Gala, Conférence, Activité standard — modifiables dans `/calendar/templates`.
+- Glisser-déposer une tâche pour la replanifier. Raccourcis : ← → (période), T (aujourd'hui), M / S / A / R (vues), N (nouvelle tâche).
+- Abonnement Google Agenda / Outlook : ajouter l'URL `https://<votre-domaine>/api/calendar/ics`.
+
+## 5. IA — Auto-mise à jour des modèles
 
 L'application détecte automatiquement le meilleur modèle Anthropic disponible.
 Elle se met à jour toutes les heures. Aucune configuration supplémentaire requise.
 
-## 5. Base de données
+## 6. Base de données
 
 Données de démonstration déjà chargées. Pour réinitialiser:
 ```bash
 npm run db:push
 npm run db:seed
 ```
+
+Tests unitaires : `npm test`

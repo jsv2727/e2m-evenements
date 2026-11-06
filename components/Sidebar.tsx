@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Calendar,
+  CalendarDays,
   Users,
   Truck,
   FileText,
@@ -17,6 +18,7 @@ import { cn } from '@/lib/utils';
 
 const nav = [
   { href: '/', label: 'Tableau de bord', icon: LayoutDashboard },
+  { href: '/calendar', label: 'Calendrier', icon: CalendarDays },
   { href: '/events', label: 'Événements', icon: Calendar },
   { href: '/guests', label: 'Invités', icon: Users },
   { href: '/suppliers', label: 'Fournisseurs', icon: Truck },

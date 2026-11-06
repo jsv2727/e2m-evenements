@@ -6,6 +6,9 @@ import Modal from '@/components/Modal';
 import { formatCurrency, formatDate, getDaysUntil, getStatusColor, getStatusLabel } from '@/lib/utils';
 import { Plus, Calendar, MapPin, DollarSign, Users, Search, Filter, Trash2, Pencil } from 'lucide-react';
 import Link from 'next/link';
+import { EVENT_TYPES } from '@/lib/event-types';
+
+type TemplateOption = { id: string; name: string; eventType: string | null; items: unknown[] };
 
 type Event = {
   id: string;
@@ -24,7 +27,6 @@ type Event = {
   expenses?: { amount: number }[];
 };
 
-const EVENT_TYPES = ['Gala', 'Conférence', 'Mariage', 'Lancement', 'Corporatif', 'Sportif', 'Culturel', 'Autre'];
 const EVENT_STATUSES = ['PLANNING', 'CONFIRMED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'];
 
 export default function EventsPage() {
@@ -37,7 +39,7 @@ export default function EventsPage() {
   const emptyForm = {
     name: '', description: '', startDate: '', endDate: '',
     venue: '', city: '', status: 'PLANNING', budget: '',
-    clientName: '', clientEmail: '', clientPhone: '', type: '', capacity: '',
+    clientName: '', clientEmail: '', clientPhone: '', type: '', capacity: '', templateId: '',
   };
   const [form, setForm] = useState(emptyForm);
 
@@ -48,7 +50,15 @@ export default function EventsPage() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchEvents(); }, []);
+  const [templates, setTemplates] = useState<TemplateOption[]>([]);
+
+  useEffect(() => {
+    fetchEvents();
+    fetch('/api/task-templates').then((r) => (r.ok ? r.json() : [])).then(setTemplates).catch(() => setTemplates([]));
+  }, []);
+
+  const matchTemplate = (type: string) =>
+    templates.find((t) => t.eventType && t.eventType.toLowerCase() === type.toLowerCase())?.id ?? '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,6 +100,7 @@ export default function EventsPage() {
       clientPhone: '',
       type: ev.type || '',
       capacity: ev.capacity ? String(ev.capacity) : '',
+      templateId: '',
     });
     setModalOpen(true);
   };
@@ -254,7 +265,7 @@ export default function EventsPage() {
             </div>
             <div>
               <label className={labelCls}>Type</label>
-              <select className={inputCls} value={form.type} onChange={e => setForm({ ...form, type: e.target.value })}>
+              <select className={inputCls} value={form.type} onChange={e => setForm({ ...form, type: e.target.value, ...(!editingId && { templateId: matchTemplate(e.target.value) }) })}>
                 <option value="">Sélectionner...</option>
                 {EVENT_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
@@ -297,6 +308,15 @@ export default function EventsPage() {
               <label className={labelCls}>Courriel client</label>
               <input type="email" className={inputCls} placeholder="client@exemple.com" value={form.clientEmail} onChange={e => setForm({ ...form, clientEmail: e.target.value })} />
             </div>
+            {!editingId && (
+              <div className="col-span-2 rounded-lg border border-indigo-500/30 bg-indigo-500/5 p-3">
+                <label className={labelCls}>Rétroplanning (génère automatiquement les tâches datées)</label>
+                <select className={inputCls} value={form.templateId} onChange={e => setForm({ ...form, templateId: e.target.value })}>
+                  <option value="">Aucun</option>
+                  {templates.map(t => <option key={t.id} value={t.id}>{t.name} — {t.items.length} étapes</option>)}
+                </select>
+              </div>
+            )}
             <div className="col-span-2">
               <label className={labelCls}>Description</label>
               <textarea className={inputCls} rows={3} placeholder="Description de l'événement..." value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
