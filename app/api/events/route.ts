@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { applyTemplateToEvent } from '@/lib/task-service';
 
 export async function GET() {
   const events = await db.event.findMany({
@@ -32,5 +33,8 @@ export async function POST(req: Request) {
       notes: body.notes,
     },
   });
-  return NextResponse.json(event);
+  // Rétroplanning optionnel : génère automatiquement les tâches du modèle choisi.
+  const templateId = typeof body.templateId === 'string' && body.templateId ? body.templateId : null;
+  const generated = templateId ? await applyTemplateToEvent(event.id, templateId) : null;
+  return NextResponse.json({ ...event, generated });
 }

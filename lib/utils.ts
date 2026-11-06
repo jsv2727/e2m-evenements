@@ -13,8 +13,10 @@ export function formatCurrency(amount: number, currency = 'CAD') {
   }).format(amount);
 }
 
+// Les dates sont stockées en heure murale UTC : affichage en UTC pour éviter un décalage d'un jour.
 export function formatDate(date: string | Date, options?: Intl.DateTimeFormatOptions) {
   return new Intl.DateTimeFormat('fr-CA', {
+    timeZone: 'UTC',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -24,6 +26,7 @@ export function formatDate(date: string | Date, options?: Intl.DateTimeFormatOpt
 
 export function formatDateShort(date: string | Date) {
   return new Intl.DateTimeFormat('fr-CA', {
+    timeZone: 'UTC',
     month: 'short',
     day: 'numeric',
   }).format(new Date(date));

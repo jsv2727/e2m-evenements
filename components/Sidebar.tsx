@@ -5,18 +5,21 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Calendar,
+  CalendarDays,
   Users,
   Truck,
   FileText,
   DollarSign,
   Bot,
   Settings,
+  LogOut,
   Zap,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const nav = [
   { href: '/', label: 'Tableau de bord', icon: LayoutDashboard },
+  { href: '/calendar', label: 'Calendrier', icon: CalendarDays },
   { href: '/events', label: 'Événements', icon: Calendar },
   { href: '/guests', label: 'Invités', icon: Users },
   { href: '/suppliers', label: 'Fournisseurs', icon: Truck },
@@ -27,6 +30,12 @@ const nav = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  if (pathname === '/login') return null;
+
+  const logout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    window.location.assign('/login');
+  };
 
   return (
     <aside className="fixed left-0 top-0 h-screen w-[260px] bg-slate-900 border-r border-slate-800 flex flex-col z-40">
@@ -74,6 +83,14 @@ export default function Sidebar() {
           <Settings size={18} />
           Paramètres
         </Link>
+        <button
+          type="button"
+          onClick={logout}
+          className="mt-1 flex w-full items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-slate-800 transition-all"
+        >
+          <LogOut size={18} />
+          Déconnexion
+        </button>
         <div className="mt-3 px-3 py-2 bg-slate-800/50 rounded-lg">
           <div className="flex items-center gap-2 mb-1">
             <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse-slow" />

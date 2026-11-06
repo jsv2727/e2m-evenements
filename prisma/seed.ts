@@ -1,4 +1,5 @@
 import { PrismaClient } from '@prisma/client';
+import { DEFAULT_TASK_TEMPLATES } from '../lib/default-task-templates';
 
 const prisma = new PrismaClient();
 
@@ -16,6 +17,19 @@ async function main() {
       aiModel: 'claude-opus-4-7',
     },
   });
+
+  // Rétroplannings par défaut (idempotent)
+  for (const { id, items, ...template } of DEFAULT_TASK_TEMPLATES) {
+    await prisma.taskTemplate.upsert({
+      where: { id },
+      update: {},
+      create: {
+        id,
+        ...template,
+        items: { create: items.map((item, sortOrder) => ({ ...item, sortOrder })) },
+      },
+    });
+  }
 
   // Suppliers
   const supplier1 = await prisma.supplier.create({
